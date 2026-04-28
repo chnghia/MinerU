@@ -194,3 +194,34 @@ def get_local_models_dir():
     if models_dir is None:
         logger.warning(f"'models-dir' not found in {CONFIG_FILE_NAME}, use None as default")
     return models_dir
+
+
+def get_ocr_hook_enable(default: bool = False) -> bool:
+    value = os.getenv("MINERU_OCR_HOOK_ENABLE")
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def get_ocr_hook_langs(default: str = "vi") -> set[str]:
+    value = os.getenv("MINERU_OCR_HOOK_LANGS", default)
+    langs = {
+        item.strip().lower()
+        for item in value.split(",")
+        if item.strip()
+    }
+    return langs or {"vi"}
+
+
+def get_ocr_hook_provider(default: str = "vietnamese_default") -> str:
+    return os.getenv("MINERU_OCR_HOOK_PROVIDER", default).strip().lower()
+
+
+def get_ocr_hook_vlm_block_types(default: str = "text,title,ref_text,list,phonetic") -> set[str]:
+    value = os.getenv("MINERU_OCR_HOOK_VLM_BLOCK_TYPES", default)
+    block_types = {
+        item.strip()
+        for item in value.split(",")
+        if item.strip()
+    }
+    return block_types

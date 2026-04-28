@@ -25,6 +25,7 @@ from ...utils.ocr_utils import (
     get_rotate_crop_image_for_text_rec,
 )
 from ...utils.pdf_image_tools import get_crop_np_img
+from mineru.backend.hooks.ocr_hook import get_ocr_hook_dispatcher
 
 LAYOUT_BASE_BATCH_SIZE = 1
 MFR_BASE_BATCH_SIZE = 16
@@ -776,14 +777,19 @@ class BatchAnalyze:
             # Process each language separately
             for lang, img_crop_list in img_crop_lists_by_lang.items():
                 if len(img_crop_list) > 0:
-                    # Get OCR results for this language's images
-
-                    ocr_model = atom_model_manager.get_atom_model(
-                        atom_model_name=AtomicModel.OCR,
-                        det_db_box_thresh=0.3,
-                        lang=lang
-                    )
-                    ocr_res_list = ocr_model.ocr(img_crop_list, det=False, tqdm_enable=True)[0]
+                    ocr_res_list = None
+                    hook_dispatcher = get_ocr_hook_dispatcher()
+                    hook_results = hook_dispatcher.run_recognition(img_crop_list, lang=lang)
+                    if hook_results is not None and len(hook_results) == len(img_crop_list):
+                        ocr_res_list = [(item.text, item.score) for item in hook_results]
+                    else:
+                        # Get OCR results for this language's images
+                        ocr_model = atom_model_manager.get_atom_model(
+                            atom_model_name=AtomicModel.OCR,
+                            det_db_box_thresh=0.3,
+                            lang=lang
+                        )
+                        ocr_res_list = ocr_model.ocr(img_crop_list, det=False, tqdm_enable=True)[0]
 
                     # Verify we have matching counts
                     assert len(ocr_res_list) == len(

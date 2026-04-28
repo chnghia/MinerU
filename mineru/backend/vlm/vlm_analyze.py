@@ -8,6 +8,7 @@ import json
 import threading
 from contextlib import asynccontextmanager, contextmanager
 
+import numpy as np
 import pypdfium2 as pdfium
 from loguru import logger
 from tqdm import tqdm
@@ -19,6 +20,7 @@ from .model_output_to_middle_json import (
     finalize_middle_json,
     init_middle_json,
 )
+from mineru.backend.hooks.ocr_hook import get_ocr_hook_dispatcher
 from mineru.backend.utils.runtime_utils import exclude_progress_bar_idle_time
 from ...data.data_reader_writer import DataWriter
 from mineru.utils.pdf_image_tools import (
@@ -414,6 +416,7 @@ def doc_analyze(
     server_url: str | None = None,
     **kwargs,
 ):
+    lang = kwargs.pop("lang", None)
     if predictor is None:
         predictor = ModelSingleton().get_model(backend, model_path, server_url, **kwargs)
     predictor = _maybe_enable_serial_execution(predictor, backend)
@@ -458,6 +461,14 @@ def doc_analyze(
                     )
                     with predictor_execution_guard(predictor):
                         window_results = predictor.batch_two_step_extract(images=images_pil_list)
+                    hook_dispatcher = get_ocr_hook_dispatcher()
+                    for page_blocks, image_dict in zip(window_results, images_list):
+                        np_img = np.asarray(image_dict["img_pil"])
+                        hook_dispatcher.run_vlm_postprocess(
+                            page_blocks=page_blocks,
+                            page_image_rgb=np_img,
+                            lang=lang,
+                        )
                     results.extend(window_results)
                     if progress_bar is None:
                         progress_bar = tqdm(total=page_count, desc="Processing pages")
@@ -506,6 +517,7 @@ async def aio_doc_analyze(
     server_url: str | None = None,
     **kwargs,
 ):
+    lang = kwargs.pop("lang", None)
     if predictor is None:
         predictor = ModelSingleton().get_model(backend, model_path, server_url, **kwargs)
     predictor = _maybe_enable_serial_execution(predictor, backend)
@@ -549,6 +561,14 @@ async def aio_doc_analyze(
                     )
                     async with aio_predictor_execution_guard(predictor):
                         window_results = await predictor.aio_batch_two_step_extract(images=images_pil_list)
+                    hook_dispatcher = get_ocr_hook_dispatcher()
+                    for page_blocks, image_dict in zip(window_results, images_list):
+                        np_img = np.asarray(image_dict["img_pil"])
+                        hook_dispatcher.run_vlm_postprocess(
+                            page_blocks=page_blocks,
+                            page_image_rgb=np_img,
+                            lang=lang,
+                        )
                     results.extend(window_results)
                     if progress_bar is None:
                         progress_bar = tqdm(total=page_count, desc="Processing pages")

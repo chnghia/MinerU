@@ -3,7 +3,7 @@ import asyncio
 import os
 from pathlib import Path
 
-from demo.demo import run_demo
+from demo import run_demo
 
 
 def main() -> None:
@@ -16,9 +16,7 @@ def main() -> None:
     # Leave None to auto-start local mineru-api.
     api_url = None
 
-    # Force OCR flow to make sure OCR hook is exercised.
-    backend = "pipeline"
-    parse_method = "ocr"
+    # Common settings
     language = "vi"
     formula_enable = True
     table_enable = True
@@ -31,21 +29,27 @@ def main() -> None:
     os.environ["MINERU_OCR_HOOK_LANGS"] = "vi"
     os.environ["MINERU_OCR_HOOK_PROVIDER"] = "vietocr"
 
-    asyncio.run(
-        run_demo(
-            input_path=input_path,
-            output_dir=output_dir,
-            api_url=api_url,
-            backend=backend,
-            parse_method=parse_method,
-            language=language,
-            formula_enable=formula_enable,
-            table_enable=table_enable,
-            server_url=server_url,
-            start_page_id=start_page_id,
-            end_page_id=end_page_id,
+    backends = ["pipeline", "vlm-auto-engine"]
+
+    for backend in backends:
+        print(f"\n>>> Running demo with backend: {backend}")
+        output_dir = demo_dir / f"api_output_rfi_{backend}"
+        
+        asyncio.run(
+            run_demo(
+                input_path=input_path,
+                output_dir=output_dir,
+                api_url=api_url,
+                backend=backend,
+                parse_method="auto" if backend == "vlm-auto-engine" else "ocr",
+                language=language,
+                formula_enable=formula_enable,
+                table_enable=table_enable,
+                server_url=server_url,
+                start_page_id=start_page_id,
+                end_page_id=end_page_id,
+            )
         )
-    )
 
 
 if __name__ == "__main__":

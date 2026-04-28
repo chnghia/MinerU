@@ -65,6 +65,10 @@ dependencies = [
     "fastapi",
     "python-multipart",
     "uvicorn",
+    "torch",
+    "torchvision",
+    "transformers",
+    "shapely"
 ]
 
 [project.optional-dependencies]

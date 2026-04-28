@@ -113,6 +113,11 @@ class VietOCRProvider:
         if self._init_error is not None:
             return False
         try:
+            # Patch for Pillow 10+ compatibility with vietocr
+            from PIL import Image
+            if not hasattr(Image, "ANTIALIAS"):
+                Image.ANTIALIAS = getattr(Image, "Resampling", Image).LANCZOS
+
             from vietocr.tool.predictor import Predictor  # type: ignore
             from vietocr.tool.config import Cfg  # type: ignore
 
